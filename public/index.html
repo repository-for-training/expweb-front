@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>クラウド経費報告</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch('/config');
+                const config = await response.json();
+                window.API_BASE_URL = config.API_BASE_URL;
+            } catch (error) {
+                console.error('Failed to fetch config:', error);
+            }
+        });
+    </script>
+</head>
+<body>
+    <header>
+        <nav>
+            <img src="img/logo.png" alt="ロゴ" class="logo">
+            <ul>
+                <li><a href="#home">ホーム</a></li>
+                <li><a href="#create">経費申請</a></li>
+                <li><a href="#list">申請一覧</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main id="app">
+        <!-- コンテンツはJavaScriptで動的に挿入されます -->
+    </main>
+
+    <footer>
+        <p>&copy; 2024 クラウド経費報告. All rights reserved.</p>
+    </footer>
+
+    <script src="js/handlers.js"></script>
+    <script src="js/create-expense.js"></script>
+    <script src="js/expense-list.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,76 @@
+# トリガー条件：mainブランチへのgit push
+trigger:
+- main
+
+# 使用するAgentの指定
+pool:
+  name: 'agent-pool'  # 実際のAgent Poolの名前に置き換えてください
+
+# Buildステージ
+stages:
+- stage: Build
+  displayName: Build stage 
+  jobs:  
+  - job: Build
+    displayName: Build
+    steps:
+    # zipとunzipのインストール
+    - script: |
+        sudo apt-get update
+        sudo apt-get install -y zip
+      displayName: 'Install zip'
+
+    # Node.jsのインストール
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+      displayName: 'Install Node.js'
+
+    # npmのインストール
+    - script: npm install
+      displayName: 'npm install'
+
+    # zip化
+    - task: ArchiveFiles@2
+      displayName: 'Archive files'
+      inputs:
+        rootFolderOrFile: '$(System.DefaultWorkingDirectory)'
+        includeRootFolder: false
+        archiveType: zip
+        archiveFile: $(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip
+        replaceExistingArchive: true
+
+    # ビルド成果物(zipファイル)をArtifactにアップロード
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish npm artifact'
+      inputs:
+        targetPath: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip' # このzipをDeployステージに受け渡す
+        artifactName: npm
+
+# Deployステージ
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build # Buildステージ完了時のみDeployステージを実行
+  condition: succeeded()
+  jobs:  
+  - job: Deploy
+    displayName: Deploy
+    steps:
+
+    # ビルド成果物(zipファイル)をArtifactからダウンロード
+    - task: DownloadBuildArtifacts@1
+      displayName: "Download npm artifact"
+      inputs:
+        artifactName: npm
+        downloadPath: $(System.ArtifactsDirectory)
+
+    # Azure App Serviceにzipファイルをデプロイ
+    - task: AzureWebApp@1
+      displayName: 'Azure Web App Deploy'
+      inputs:
+        azureSubscription: 'subscription' # 実際のサブスクリプションに置き換えてください
+        appType: 'webAppLinux'
+        appName: 'expweb-front' # 実際のApp Service名に置き換えてください
+        package: '$(System.ArtifactsDirectory)/$(Build.BuildId).zip'
+        runtimeStack: 'NODE|18-lts'
+        startUpCommand: 'npm run start'
