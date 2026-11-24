@@ -21,14 +21,14 @@ stages:
       displayName: 'Install zip'
 
     # Node.jsのインストール
-    - task: NodeTool@0
+    - task: UseNode@1
       inputs:
-        versionSpec: '18.x'
+        version: '24.x'
       displayName: 'Install Node.js'
 
     # npmのインストール
-    - script: npm install
-      displayName: 'npm install'
+    - script: npm ci --omit=dev
+      displayName: 'Install locked production dependencies'
 
     # zip化
     - task: ArchiveFiles@2
@@ -58,11 +58,15 @@ stages:
     steps:
 
     # ビルド成果物(zipファイル)をArtifactからダウンロード
-    - task: DownloadBuildArtifacts@1
+    - task: DownloadPipelineArtifact@2
       displayName: "Download npm artifact"
       inputs:
+        buildType: current
         artifactName: npm
-        downloadPath: $(System.ArtifactsDirectory)
+        targetPath: $(Pipeline.Workspace)/npm
+
+    - bash: test -s "$(Pipeline.Workspace)/npm/$(Build.BuildId).zip"
+      displayName: "Verify deployment ZIP"
 
     # Azure App Serviceにzipファイルをデプロイ
     - task: AzureWebApp@1
@@ -71,6 +75,6 @@ stages:
         azureSubscription: 'subscription' # 実際のサブスクリプションに置き換えてください
         appType: 'webAppLinux'
         appName: 'expweb-front' # 実際のApp Service名に置き換えてください
-        package: '$(System.ArtifactsDirectory)/$(Build.BuildId).zip'
-        runtimeStack: 'NODE|20-lts'
+        package: '$(Pipeline.Workspace)/npm/$(Build.BuildId).zip'
+        runtimeStack: 'NODE|24-lts'
         startUpCommand: 'npm run start'

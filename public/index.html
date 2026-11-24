@@ -5,17 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>クラウド経費報告</title>
     <link rel="stylesheet" href="css/style.css">
-    <script>
-        window.addEventListener('load', async () => {
-            try {
-                const response = await fetch('/config');
-                const config = await response.json();
-                window.API_BASE_URL = config.API_BASE_URL;
-            } catch (error) {
-                console.error('Failed to fetch config:', error);
-            }
-        });
-    </script>
 </head>
 <body>
     <header>
