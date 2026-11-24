@@ -5,11 +5,11 @@ function createExpenseForm() {
         <h2>経費申請</h2>
         <div class="form-group">
             <label for="amount">金額（円）</label>
-            <input type="number" id="amount" name="amount" required>
+            <input type="number" id="amount" name="amount" min="1" max="99999999" step="1" required>
         </div>
         <div class="form-group">
             <label for="description">説明（例：交通費、宿泊費、食費など）</label>
-            <textarea id="description" name="description" rows="4" required></textarea>
+            <textarea id="description" name="description" rows="4" maxlength="1000" required></textarea>
         </div>
         <div class="form-group">
             <label for="date">日付</label>
@@ -22,7 +22,7 @@ function createExpenseForm() {
         e.preventDefault();
         const formData = new FormData(form);
         const data = {
-            amount: parseInt(formData.get('amount')),
+            amount: Number(formData.get('amount')),
             description: formData.get('description'),
             date: formData.get('date')
         };

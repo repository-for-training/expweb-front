@@ -16,36 +16,39 @@ async function displayExpenseList() {
                     <th>操作</th>
                 </tr>
             </thead>
-            <tbody>
-                ${expenses.map(expense => `
-                    <tr>
-                        <td>${new Date(expense.created_at).toLocaleString()}</td>
-                        <td>${expense.amount}円</td>
-                        <td>${expense.description}</td>
-                        <td>${expense.status}</td>
-                        <td>
-                            <button class="action-btn edit-btn" data-id="${expense.id}">修正</button>
-                            <button class="action-btn delete-btn" data-id="${expense.id}">削除</button>
-                        </td>
-                    </tr>
-                `).join('')}
-            </tbody>
         `;
-
+        const tbody = table.createTBody();
+        for (const expense of expenses) {
+            const row = tbody.insertRow();
+            const values = [
+                new Date(expense.created_at).toLocaleString(),
+                `${expense.amount}円`,
+                expense.description,
+                expense.status,
+            ];
+            for (const value of values) {
+                row.insertCell().textContent = String(value ?? '');
+            }
+            const actions = row.insertCell();
+            for (const [label, className, onClick] of [
+                ['修正', 'edit-btn', editExpense],
+                ['削除', 'delete-btn', deleteExpense],
+            ]) {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.classList.add('action-btn', className);
+                button.textContent = label;
+                button.dataset.id = String(expense.id);
+                button.addEventListener('click', () => onClick(button.dataset.id));
+                actions.appendChild(button);
+            }
+        }
         container.appendChild(table);
 
-        // 修正ボタンのイベントリスナー
-        container.querySelectorAll('.edit-btn').forEach(btn => {
-            btn.addEventListener('click', () => editExpense(btn.dataset.id));
-        });
-
-        // 削除ボタンのイベントリスナー
-        container.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', () => deleteExpense(btn.dataset.id));
-        });
-
     } catch (error) {
-        container.innerHTML += '<p>経費一覧の取得中にエラーが発生しました。</p>';
+        const message = document.createElement('p');
+        message.textContent = '経費一覧の取得中にエラーが発生しました。';
+        container.appendChild(message);
         console.error(error);
     }
 
@@ -57,9 +60,9 @@ async function editExpense(id) {
     const newAmount = prompt('新しい金額を入力してください:');
     const newDescription = prompt('新しい説明を入力してください:');
 
-    if (newAmount && newDescription) {
+    if (newAmount !== null && newDescription !== null) {
         try {
-            await api.updateExpense(id, { amount: newAmount, description: newDescription });
+            await api.updateExpense(id, { amount: Number(newAmount), description: newDescription });
             alert('経費が正常に更新されました。');
             // 一覧を再表示
             const app = document.getElementById('app');

@@ -1,57 +1,44 @@
-let API_BASE_URL = '';
+let apiBaseUrl;
 
-// サーバーから設定を取得する関数
-async function fetchConfig() {
+async function loadApiBaseUrl() {
     try {
         const response = await fetch('/config');
-        const config = await response.json();
-        API_BASE_URL = config.API_BASE_URL;
-    } catch (error) {
-        console.error('Failed to fetch config:', error);
+        if (!response.ok) return '';
+        const { API_BASE_URL } = await response.json();
+        if (!API_BASE_URL) return '';
+        const configured = new URL(API_BASE_URL, window.location.href);
+        if (!['http:', 'https:'].includes(configured.protocol)) return '';
+        const pathname = configured.pathname.replace(/\/+$/, '');
+        const isSameOrigin = configured.origin === window.location.origin;
+        const avoidsMixedContent = configured.host === window.location.host &&
+            configured.protocol === 'http:' && window.location.protocol === 'https:';
+        return isSameOrigin || avoidsMixedContent ? pathname : configured.origin + pathname;
+    } catch {
+        return '';
     }
 }
 
-// API呼び出し用の関数
+async function requestExpense(suffix = '', options) {
+    apiBaseUrl ??= loadApiBaseUrl();
+    const base = await apiBaseUrl;
+    const response = await fetch(`${base}/api/expense${suffix}`, options);
+    if (!response.ok) {
+        throw new Error(`経費APIのリクエストに失敗しました (HTTP ${response.status})`);
+    }
+    return response.status === 204 ? undefined : response.json();
+}
+
+function jsonRequest(method, data) {
+    return {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    };
+}
+
 const api = {
-    // 経費の作成
-    createExpense: async (data) => {
-        await fetchConfig(); // 設定を取得
-        const response = await fetch(`${API_BASE_URL}/api/expense`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        });
-        return response.json();
-    },
-
-    // 経費一覧の取得
-    getExpenses: async () => {
-        await fetchConfig(); // 設定を取得
-        const response = await fetch(`${API_BASE_URL}/api/expense`);
-        return response.json();
-    },
-
-    // 経費の更新
-    updateExpense: async (id, data) => {
-        await fetchConfig(); // 設定を取得
-        const response = await fetch(`${API_BASE_URL}/api/expense/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        });
-        return response.json();
-    },
-
-    // 経費の削除
-    deleteExpense: async (id) => {
-        await fetchConfig(); // 設定を取得
-        const response = await fetch(`${API_BASE_URL}/api/expense/${id}`, {
-            method: 'DELETE',
-        });
-        return response.json();
-    },
+    createExpense: (data) => requestExpense('', jsonRequest('POST', data)),
+    getExpenses: () => requestExpense(),
+    updateExpense: (id, data) => requestExpense(`/${encodeURIComponent(id)}`, jsonRequest('PUT', data)),
+    deleteExpense: (id) => requestExpense(`/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 };
